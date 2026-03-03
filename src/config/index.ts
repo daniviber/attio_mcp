@@ -5,7 +5,6 @@ export interface Config {
     timeoutMs: number;
     retryAttempts: number;
   };
-  transport: "stdio" | "http";
   http: {
     port: number;
     host: string;
@@ -41,10 +40,9 @@ export function loadConfig(): Config {
       timeoutMs: getEnvAsInt("ATTIO_TIMEOUT_MS", 30000),
       retryAttempts: getEnvAsInt("ATTIO_RETRY_ATTEMPTS", 3),
     },
-    transport: (getEnvOrDefault("MCP_TRANSPORT", "stdio") as "stdio" | "http"),
     http: {
       port: getEnvAsInt("MCP_PORT", 3000),
-      host: getEnvOrDefault("MCP_HOST", "127.0.0.1"),
+      host: getEnvOrDefault("MCP_HOST", "0.0.0.0"),
       authToken: process.env.MCP_AUTH_TOKEN,
     },
     logLevel: getEnvOrDefault("LOG_LEVEL", "info") as Config["logLevel"],
