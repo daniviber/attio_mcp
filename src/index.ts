@@ -6,12 +6,12 @@ import { startStdioServer } from "./transports/stdio.js";
 
 async function main(): Promise<void> {
   const config = loadConfig();
-  const useStdio = process.argv.includes("--stdio") || process.env.MCP_TRANSPORT === "stdio";
+  const useHttp = process.argv.includes("--http") || process.env.MCP_TRANSPORT === "http";
 
-  if (useStdio) {
-    await startStdioServer(config);
-  } else {
+  if (useHttp) {
     await startHttpServer(config);
+  } else {
+    await startStdioServer(config);
   }
 }
 

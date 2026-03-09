@@ -53,7 +53,7 @@ Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/
   "mcpServers": {
     "attio": {
       "command": "node",
-      "args": ["/path/to/attio_mcp/dist/index.js", "--stdio"],
+      "args": ["/path/to/attio_mcp/dist/index.js"],
       "env": {
         "ATTIO_API_KEY": "your_api_key"
       }
@@ -65,7 +65,7 @@ Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/
 Or run directly:
 
 ```bash
-ATTIO_API_KEY=your_api_key node dist/index.js --stdio
+ATTIO_API_KEY=your_api_key node dist/index.js
 ```
 
 ### HTTP Streamable Transport (remote / multi-tenant)
@@ -75,7 +75,9 @@ Best for hosted deployments — multi-tenant, each connecting client provides th
 Start the server:
 
 ```bash
-node dist/index.js
+node dist/index.js --http
+# or
+MCP_TRANSPORT=http node dist/index.js
 ```
 
 The server will start on `http://0.0.0.0:3000/mcp` by default.
@@ -119,7 +121,7 @@ For Claude Desktop to connect to a remote HTTP server:
 | `ATTIO_BASE_URL` | `https://api.attio.com` | both | Attio API base URL |
 | `ATTIO_TIMEOUT_MS` | `30000` | both | Request timeout in milliseconds |
 | `ATTIO_RETRY_ATTEMPTS` | `3` | both | Number of retry attempts |
-| `MCP_TRANSPORT` | - | - | Set to `stdio` to use stdio (alternative to `--stdio` flag) |
+| `MCP_TRANSPORT` | - | - | Set to `http` to use HTTP transport (default is stdio) |
 | `MCP_PORT` | `3000` | http | HTTP server port |
 | `MCP_HOST` | `0.0.0.0` | http | HTTP server bind address |
 | `MCP_ALLOWED_ORIGINS` | - | http | Comma-separated allowed CORS origins |
@@ -131,9 +133,9 @@ For Claude Desktop to connect to a remote HTTP server:
 
 | Method | Result |
 |--------|--------|
-| `node dist/index.js --stdio` | Stdio transport |
-| `MCP_TRANSPORT=stdio node dist/index.js` | Stdio transport |
-| `node dist/index.js` | HTTP transport (default) |
+| `node dist/index.js` | Stdio transport (default) |
+| `node dist/index.js --http` | HTTP transport |
+| `MCP_TRANSPORT=http node dist/index.js` | HTTP transport |
 
 ### HTTP Endpoints
 
