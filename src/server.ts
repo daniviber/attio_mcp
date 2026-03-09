@@ -5,18 +5,18 @@ import { registerResources } from "./resources/index.js";
 import type { Config } from "./config/index.js";
 
 /**
- * Create and configure the Attio MCP server
+ * Create and configure the Attio MCP server for a given API token
  */
-export function createServer(config: Config): McpServer {
+export function createServer(config: Config, attioApiKey: string): McpServer {
   // Create MCP server
   const server = new McpServer({
     name: "attio-mcp-server",
     version: "1.0.0",
   });
 
-  // Create Attio API client
+  // Create Attio API client with the per-session token
   const attioClient = new AttioClient({
-    apiKey: config.attio.apiKey,
+    apiKey: attioApiKey,
     baseUrl: config.attio.baseUrl,
     timeoutMs: config.attio.timeoutMs,
     retryAttempts: config.attio.retryAttempts,

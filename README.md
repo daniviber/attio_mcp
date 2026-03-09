@@ -20,18 +20,12 @@ npm install
 npm run build
 ```
 
-## Configuration
+## Authentication
 
-Create a `.env` file based on `.env.example`:
+Each client authenticates using their own **Attio API token**. There is no separate server-level auth — the Attio token is the identity.
 
-```env
-# Required
-ATTIO_API_KEY=your_api_key_here
-
-# Optional
-ATTIO_BASE_URL=https://api.attio.com
-LOG_LEVEL=info
-```
+- **Stdio mode**: Token is provided via the `ATTIO_API_KEY` environment variable
+- **HTTP mode**: Token is provided via the `Authorization: Bearer <token>` header on every request
 
 ### Getting an API Key
 
@@ -48,7 +42,9 @@ LOG_LEVEL=info
 
 ## Usage
 
-### Local Mode (stdio transport)
+### Stdio Transport (local / Claude Desktop)
+
+Best for local use — single-tenant, one process per user. The Attio API token is read from the `ATTIO_API_KEY` environment variable.
 
 Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
 
@@ -57,7 +53,7 @@ Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/
   "mcpServers": {
     "attio": {
       "command": "node",
-      "args": ["/path/to/attio_mcp/dist/index.js"],
+      "args": ["/path/to/attio_mcp/dist/index.js", "--stdio"],
       "env": {
         "ATTIO_API_KEY": "your_api_key"
       }
@@ -66,31 +62,34 @@ Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/
 }
 ```
 
-### Remote Mode (HTTP Streamable transport)
-
-Start the server in HTTP mode:
+Or run directly:
 
 ```bash
-# Using environment variable
-MCP_TRANSPORT=http ATTIO_API_KEY=your_api_key node dist/index.js
-
-# Or using command line flag
-ATTIO_API_KEY=your_api_key node dist/index.js --transport http
+ATTIO_API_KEY=your_api_key node dist/index.js --stdio
 ```
 
-The server will start on `http://127.0.0.1:3000/mcp` by default.
+### HTTP Streamable Transport (remote / multi-tenant)
 
-#### HTTP Configuration
+Best for hosted deployments — multi-tenant, each connecting client provides their own Attio API token via the `Authorization` header.
 
-| Environment Variable | Default | Description |
-|---------------------|---------|-------------|
-| `MCP_TRANSPORT` | `stdio` | Transport mode (`stdio` or `http`) |
-| `MCP_PORT` | `3000` | HTTP server port |
-| `MCP_HOST` | `127.0.0.1` | HTTP server bind address |
-| `MCP_AUTH_TOKEN` | - | Bearer token for authentication (optional) |
-| `MCP_ALLOWED_ORIGINS` | - | Comma-separated allowed CORS origins |
-| `MCP_SESSION_TTL_SECONDS` | `3600` | Session timeout in seconds |
-| `MCP_MAX_SESSIONS` | `1000` | Maximum concurrent sessions |
+Start the server:
+
+```bash
+node dist/index.js
+```
+
+The server will start on `http://0.0.0.0:3000/mcp` by default.
+
+Connect by sending requests with your Attio token:
+
+```bash
+curl -X POST http://localhost:3000/mcp \
+  -H "Authorization: Bearer your_attio_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2025-03-26","clientInfo":{"name":"test","version":"1.0"}},"id":1}'
+```
+
+Each session is scoped to the token that created it. Subsequent requests must include the same token and the `Mcp-Session-Id` header returned during initialization.
 
 #### Using with mcp-remote adapter
 
@@ -101,21 +100,47 @@ For Claude Desktop to connect to a remote HTTP server:
   "mcpServers": {
     "attio-remote": {
       "command": "npx",
-      "args": ["-y", "mcp-remote", "https://your-server.com/mcp"],
+      "args": ["-y", "mcp-remote", "http://your-server.com/mcp"],
       "env": {
-        "MCP_AUTH_TOKEN": "your_auth_token"
+        "AUTHORIZATION": "Bearer your_attio_api_key"
       }
     }
   }
 }
 ```
 
-#### HTTP Endpoints
+## Configuration
+
+### Environment Variables
+
+| Variable | Default | Transport | Description |
+|----------|---------|-----------|-------------|
+| `ATTIO_API_KEY` | - | stdio (required) | Attio API token for stdio transport |
+| `ATTIO_BASE_URL` | `https://api.attio.com` | both | Attio API base URL |
+| `ATTIO_TIMEOUT_MS` | `30000` | both | Request timeout in milliseconds |
+| `ATTIO_RETRY_ATTEMPTS` | `3` | both | Number of retry attempts |
+| `MCP_TRANSPORT` | - | - | Set to `stdio` to use stdio (alternative to `--stdio` flag) |
+| `MCP_PORT` | `3000` | http | HTTP server port |
+| `MCP_HOST` | `0.0.0.0` | http | HTTP server bind address |
+| `MCP_ALLOWED_ORIGINS` | - | http | Comma-separated allowed CORS origins |
+| `MCP_SESSION_TTL_SECONDS` | `3600` | http | Session timeout in seconds |
+| `MCP_MAX_SESSIONS` | `1000` | http | Maximum concurrent sessions |
+| `LOG_LEVEL` | `info` | both | Log level (`debug`, `info`, `warn`, `error`) |
+
+### Transport Selection
+
+| Method | Result |
+|--------|--------|
+| `node dist/index.js --stdio` | Stdio transport |
+| `MCP_TRANSPORT=stdio node dist/index.js` | Stdio transport |
+| `node dist/index.js` | HTTP transport (default) |
+
+### HTTP Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/mcp` | POST/GET | MCP Streamable HTTP endpoint |
-| `/health` | GET | Health check endpoint |
+| `/mcp` | POST/GET/DELETE | MCP Streamable HTTP endpoint |
+| `/health` | GET | Health check (no auth required) |
 
 ## Available Tools
 
@@ -223,7 +248,7 @@ Once configured, you can ask Claude:
 ## Development
 
 ```bash
-# Run in development mode
+# Run in development mode (HTTP, default)
 npm run dev
 
 # Run tests
